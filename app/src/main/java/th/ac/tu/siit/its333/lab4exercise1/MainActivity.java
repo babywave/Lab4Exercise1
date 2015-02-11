@@ -10,23 +10,53 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ListView;
+import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
+import android.widget.Toast;
 
 
 public class MainActivity extends ActionBarActivity {
 
+
     CourseDBHelper helper;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        helper = new CourseDBHelper(this);
+
     }
+
+
+
 
     @Override
     protected void onResume() {
         super.onResume();
+
+
+        SQLiteDatabase db = helper.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT SUM(credit) TotalCredit, SUM(credit*value) TGP FROM course;", null);
+
+        cursor.moveToFirst(); // get the first row
+        int credit = cursor.getInt(0); // get the first column
+        double tgp = cursor.getDouble(1);
+
+        double gpa = tgp/credit;
+
+        TextView GP = (TextView)findViewById(R.id.tvGP);
+        TextView CR = (TextView)findViewById(R.id.tvCR);
+        TextView GPA = (TextView)findViewById(R.id.tvGPA);
+
+        GP.setText(String.format("%.2f", tgp));
+        CR.setText(String.format("%d", credit));
+        GPA.setText(String.format("%.2f", gpa));
 
         // This method is called when this activity is put foreground.
 
@@ -48,7 +78,10 @@ public class MainActivity extends ActionBarActivity {
                 break;
 
             case R.id.btReset:
+                SQLiteDatabase db = helper.getWritableDatabase();
+                int n_rows = db.delete("course", "", null);
 
+                onResume();
                 break;
         }
     }
@@ -61,6 +94,20 @@ public class MainActivity extends ActionBarActivity {
                 int credit = data.getIntExtra("credit", 0);
                 String grade = data.getStringExtra("grade");
 
+                helper = new CourseDBHelper(this);
+                SQLiteDatabase db = helper.getWritableDatabase();
+                ContentValues r = new ContentValues();
+                r.put("code", code);
+                r.put("credit", credit);
+                r.put("grade", grade);
+                r.put("value", gradeToValue(grade));
+                long new_id = db.insert("course", null, r);
+
+                Log.d("GPACalc",new_id+"");
+                Log.d("GPACalc",code+"");
+                Log.d("GPACalc",credit+"");
+                Log.d("GPACalc",grade+"");
+                Log.d("GPACalc",gradeToValue(grade)+"");
             }
         }
 
